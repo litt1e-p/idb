@@ -287,6 +287,31 @@
     };
   });
 
+  // polyfill getAllKeys
+  [Index, ObjectStore].forEach(function(Constructor) {
+    if (Constructor.prototype.getAllKeys) return;
+    Constructor.prototype.getAllKeys = function(query, count) {
+      var instance = this;
+      var items = [];
+
+      return new Promise(function(resolve) {
+        instance.iterateCursor(query, function(cursor) {
+          if (!cursor) {
+            resolve(items);
+            return;
+          }
+          items.push(cursor.key);
+
+          if (count !== undefined && items.length == count) {
+            resolve(items);
+            return;
+          }
+          cursor.continue();
+        });
+      });
+    };
+  });
+
   function openDb(name, version, upgradeCallback) {
     var p = promisifyRequestCall(indexedDB, 'open', [name, version]);
     var request = p.request;
